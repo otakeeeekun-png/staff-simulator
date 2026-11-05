@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>縦型スタフ・シミュレーター</title>
+<style>
+:root{--ink:#17202a;--line:#66717b;--paper:#fff;--bg:#e9edf0;--accent:#c8202f;--muted:#68737d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
+header{background:#202a34;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:5}
+header strong{font-size:17px}header small{display:block;color:#d5dce2;margin-top:3px}
+main{max-width:900px;margin:auto;padding:12px;display:grid;gap:12px}
+.panel{background:#fff;border:1px solid #d4dbe0;border-radius:12px;padding:12px;box-shadow:0 2px 8px #1824310b}
+h2{font-size:16px;margin:0 0 10px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button,select,input{font:inherit;border:1px solid #aab4bd;border-radius:8px;padding:9px;background:#fff;color:#17202a}
+button{font-weight:650;cursor:pointer}button.primary{background:#263746;color:#fff;border-color:#263746}button.red{background:#c8202f;color:#fff;border-color:#c8202f}
+button:active{opacity:.75}input[type=time]{font-variant-numeric:tabular-nums}
+.clock{font-size:clamp(30px,7vw,48px);font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:1px}
+.sub{color:var(--muted);font-size:12px}.status{font-weight:700;color:#17633b}
+.staff{background:#fff;border:1.5px solid #333;width:100%;max-width:760px;margin:auto;box-shadow:0 3px 12px #0001;position:relative;overflow:hidden;color:#111}
+.paper-top{height:22px;border-bottom:1px solid #333}
+.staffhead{display:grid;grid-template-columns:minmax(0,1fr) 31% 21%;height:76px;text-align:center}
+.staffhead>div{border-right:1px solid #333;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:clamp(25px,5vw,42px)}
+.staffhead .trainkind{background:#d51f2a;color:#fff;font-size:clamp(30px,6vw,52px);font-weight:500;border-left:0}
+.trainmark{font-size:clamp(32px,5vw,48px)}
+.cars-unit{font-size:16px;align-self:flex-end;margin:0 4px 5px}
+.staff-subhead{display:grid;grid-template-columns:50% 20% 30%;min-height:72px}
+.startend{display:grid;grid-template-columns:15% 85%;grid-template-rows:1fr 1fr}
+.startend span,.startend b,.train-number,.crew-state{border-right:1px solid #333;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:center}
+.startend span{font-size:18px}.startend b{font-size:clamp(18px,3.6vw,30px);font-weight:400}
+.train-number{grid-row:1/3;grid-column:2;gap:5px}.train-number strong{font-size:clamp(30px,5vw,48px);font-weight:400}.train-number small{font-size:15px}
+.crew-state{grid-column:3;grid-row:1/3;font-size:clamp(18px,3vw,28px)}
+.staff-body{display:grid;grid-template-columns:63% 37%;min-height:560px}
+.timetable{border-right:1px solid #333;position:relative;min-width:0}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;table-layout:fixed}
+th,td{border:1px solid #333;padding:7px 3px;text-align:center;height:48px}
+th{background:#fff;font-size:12px;font-weight:400}th:first-child{width:32%}th:nth-child(2),th:nth-child(3){width:34%}
+td{font-size:clamp(16px,3.2vw,25px);font-weight:400}
+td.station{text-align:left;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:clip;position:relative}
+.seconds{font-size:.55em;vertical-align:super;line-height:0;margin-left:1px}
+tr.passed-through td.station{height:48px}
+.pass-name{display:block;text-align:right;font-size:inherit;line-height:1;color:#111;white-space:nowrap}
+#timetableTable td.station.passed-through{color:#111!important;text-align:right!important;vertical-align:bottom!important;font-size:clamp(12px,1.7vw,18px)!important}
+#timetableTable td.station.passed-through .pass-name{position:static;display:block;width:100%;text-align:right;font-size:clamp(12px,1.7vw,18px)!important;line-height:1;color:#111!important;white-space:nowrap}
+tr.current td:not([data-col="remark"]){background:#ffb347;color:#241400;font-weight:800}tr.current td[data-col="remark"]{background:#fff;color:#111;font-weight:400}tr.current{outline:0}
+tr.passed{color:#111} tr.passed td.station{color:#111}
+#staffRows tr{cursor:pointer}#staffRows tr:active{filter:brightness(.96)}
+.right-column{display:flex;flex-direction:column}
+.analog-clock{height:200px;border-bottom:1px solid #333;display:grid;place-items:center}
+.clock-face{width:clamp(105px,18vw,150px);aspect-ratio:1;border:2px solid #222;border-radius:50%;position:relative;background:repeating-conic-gradient(#222 0deg 1deg,transparent 1deg 6deg)}
+.clock-face:before{content:"";position:absolute;inset:9%;border-radius:50%;background:white}
+.clock-face span{position:absolute;z-index:1;font-size:13px;font-weight:600}
+.clock-face span:nth-child(1){top:5%;left:47%}.clock-face span:nth-child(2){right:5%;top:46%}.clock-face span:nth-child(3){bottom:5%;left:48%}.clock-face span:nth-child(4){left:5%;top:46%}
+.clock-face i{position:absolute;z-index:2;left:49%;top:49%;width:6px;height:6px;background:#111;border-radius:50%}
+.right-blank{flex:1}
+.stop-screen{position:absolute;inset:0;box-sizing:border-box;background:#f00000;color:white;min-height:0;width:100%;height:100%;padding:7% 8%;display:flex;flex-direction:column;align-items:center;gap:20px}
+.stop-message{display:flex;flex-direction:column;align-items:center;font-size:clamp(38px,7vw,62px);margin-top:8px}
+.stop-message small{font-size:22px}.stop-station-line{display:flex;align-items:baseline;justify-content:center;gap:.12em;max-width:100%;white-space:nowrap}.stop-station-name{font-size:inherit;font-weight:400;line-height:1.2;overflow-wrap:anywhere;text-align:center}.stop-message strong{font-size:clamp(48px,9vw,76px);font-weight:400;margin-top:0}
+.stop-times{align-self:flex-start;margin-top:8%;font-size:clamp(22px,4vw,34px);line-height:1.9}
+.stop-times b{font-weight:400;margin-left:10px}
+.stop-confirm{margin-top:auto;background:#ffbd00;color:#111;border:2px solid #b88b00;border-radius:0;padding:12px 28px;font-size:clamp(24px,4vw,38px);font-weight:400}
+@media(max-width:560px){main{padding:8px}.editorgrid{grid-template-columns:1fr 1fr}.editorgrid input:first-child{grid-column:span 2}.staff{padding:0}.routeinfo div{font-size:12px}th,td{padding:5px 2px;font-size:12px}.staff-body{min-height:430px}.analog-clock{height:155px}.stop-screen{min-height:0}}
+[hidden]{display:none!important}
+.notice{display:none;background:#fff0bd;border:2px solid #d49b18;border-radius:10px;padding:14px;text-align:center}
+.notice strong{display:block;font-size:23px}
+.editorgrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:5px;align-items:center;margin:6px 0}
+.editorgrid input,.editorgrid select{min-width:0;width:100%;padding:7px;box-sizing:border-box}
+.editorgrid .del{padding:7px}
+label{font-size:13px;font-weight:650;display:flex;gap:6px;align-items:center}
+@media(max-width:560px){main{padding:8px}.editorgrid{grid-template-columns:1fr 1fr}.editorgrid input:first-child{grid-column:span 2}.staff{padding:7px}.routeinfo div{font-size:12px}th,td{padding:6px 3px;font-size:12px}}
+
+/* v9 reference layout */
+.staff{max-width:100%;border-radius:0;box-shadow:none}
+.staffhead{grid-template-columns:63% 19% 18%;height:92px}.staffhead .trainkind{display:flex;flex-direction:column;gap:3px}.staffhead .trainkind small{font-size:clamp(14px,2vw,22px);font-weight:400}.staffhead .trainkind b{font-size:clamp(28px,5vw,48px);font-weight:500}
+.trainmark{font-size:clamp(34px,5vw,58px)}
+.cars-cell{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding:7px 12px;font-size:clamp(20px,3vw,30px)}
+.cars-cell small{font-size:clamp(14px,2vw,22px)}.cars-cell b{font-size:clamp(28px,4vw,42px);font-weight:400}.cars-cell span{font-size:clamp(14px,2vw,22px)}
+.staff-subhead{grid-template-columns:35% 28% 37%;min-height:76px}
+.startend{grid-template-columns:18% 82%}.startend span{font-size:clamp(16px,2.5vw,24px)}.startend b{font-size:clamp(15px,2.7vw,27px);white-space:nowrap;overflow:hidden}
+.train-number{grid-row:1/3;grid-column:auto;gap:5px}.train-number strong{font-size:clamp(22px,3.5vw,40px)}
+.crew-state{grid-column:auto;grid-row:auto;width:100%;height:100%;font-size:clamp(17px,2.8vw,27px);background:#fff;border-radius:0;border-top:0;border-bottom:1px solid #333}
+.staff-body{grid-template-columns:63% 37%;min-height:760px}
+#timetableTable th{height:46px;font-size:clamp(12px,1.7vw,20px);padding:4px 2px}
+#timetableTable th:nth-child(1){width:19%}#timetableTable th:nth-child(2){width:27%}#timetableTable th:nth-child(3){width:10%}#timetableTable th:nth-child(4){width:27%}#timetableTable th:nth-child(5){width:17%}
+#timetableTable td{height:49px;padding:3px 2px;font-size:clamp(13px,2.1vw,24px)}
+#timetableTable td.station{text-align:center;vertical-align:middle}#timetableTable td.station.passed-through{text-align:right!important;vertical-align:bottom!important;font-size:clamp(12px,1.7vw,18px)!important;padding:3px 4px}#timetableTable td.station.passed-through .pass-name{position:static;display:block;width:100%;text-align:right;font-size:clamp(12px,1.7vw,18px)!important;line-height:1;white-space:nowrap}#timetableTable td.remark{font-size:clamp(10px,1.5vw,17px);white-space:normal;overflow-wrap:anywhere}
+#timetableTable td.remark{border:0!important;white-space:normal;vertical-align:middle;text-align:left;padding:3px 4px}#timetableTable td.crossing{font-size:clamp(14px,2vw,22px)}
+.analog-clock{height:230px;border-bottom:1px solid #333}.clock-face{width:clamp(110px,18vw,170px);background:none}
+.clock-face:before{inset:0;border:0}.clock-face span{font-size:clamp(12px,1.5vw,17px)}
+.clock-face i{left:calc(50% - 3px);top:calc(50% - 3px)}
+.clock-face b{position:absolute;left:50%;bottom:50%;transform-origin:50% 100%;z-index:2;border-radius:5px}
+.hour-hand{width:4px;height:25%;background:#111;margin-left:-2px}.minute-hand{width:3px;height:36%;background:#111;margin-left:-1.5px}.second-hand{width:1.5px;height:42%;background:#d22}
+.editorgrid{grid-template-columns:minmax(90px,1.2fr) minmax(90px,1fr) minmax(90px,1fr) 80px minmax(110px,1.2fr);gap:5px}
+.editorgrid input,.editorgrid select{font-size:13px}
+@media(max-width:560px){.staff-body{min-height:735px;grid-template-columns:63% 37%}.staffhead{height:75px}.staff-subhead{grid-template-columns:35% 28% 37%}#timetableTable th{font-size:10px}#timetableTable td{font-size:12px;height:46px}#timetableTable td.remark{font-size:9px}.analog-clock{height:175px}.editorgrid{grid-template-columns:1fr 1fr}}
+
+
+/* v10: clean grid, empty cells, readable clock and iPad wheel pickers */
+#timetableTable{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #333}
+#timetableTable th,#timetableTable td{border:1px solid #333!important;box-sizing:border-box;vertical-align:middle}
+#timetableTable thead th{border:1px solid #333!important}
+#timetableTable tbody tr{height:49px}
+#timetableTable tbody td{height:49px;border:1px solid #333!important}
+#timetableTable td:empty:after{content:none!important}
+.staff-notes{padding:8px 6px;display:grid;gap:8px;font-size:12px}.staff-note label{display:block;font-weight:700;margin-bottom:3px}.staff-note input,.staff-note textarea{display:block;width:100%;box-sizing:border-box;border:1px solid #777;border-radius:2px;padding:5px;font:inherit;background:#fff;color:#111}.staff-note textarea{min-height:52px;resize:vertical;line-height:1.45}#article{min-height:5.8em}#operationSummary{min-height:8.7em}.staff-digital-clock{font-size:clamp(20px,2.6vw,30px);font-variant-numeric:tabular-nums;text-align:center;padding:9px 2px;border-bottom:1px solid #333;letter-spacing:1px}
+.time-wheel{display:flex;align-items:center;justify-content:center;gap:1px;min-width:0}
+.time-wheel select{width:31%;min-width:0;padding:5px 0;text-align:center;font-size:13px}
+.time-wheel span{font-size:12px}
+.editorgrid{grid-template-columns:minmax(80px,1.1fr) minmax(135px,1.5fr) minmax(135px,1.5fr) minmax(65px,.7fr) minmax(90px,1fr) minmax(75px,.8fr);gap:5px;align-items:center}
+.editorgrid input,.editorgrid select{min-width:0;width:100%;box-sizing:border-box}
+.editorhead{font-size:12px;text-align:center}
+.pass-label{display:block;font-size:10px;text-align:right;line-height:1.1}
+@media(max-width:700px){
+ .editorgrid{grid-template-columns:1fr 1fr}
+ .editorhead{display:none}
+ .editorgrid input,.editorgrid select{font-size:13px}
+ .time-wheel select{font-size:13px}
+}
+
+
+/* v23: station labels and overall staff typography enlarged */
+.startend span{font-size:clamp(18px,3vw,27px)!important}
+.startend b{font-size:clamp(20px,3.6vw,34px)!important;letter-spacing:.02em}
+#timetableTable td.station{font-size:clamp(18px,2.8vw,30px)!important;font-weight:500;letter-spacing:.02em}
+#timetableTable td.station.passed-through,#timetableTable td.station.passed-through .pass-name{font-size:clamp(16px,2.2vw,24px)!important}
+#timetableTable td:not(.station){font-size:clamp(16px,2.5vw,28px)}
+#timetableTable th{font-size:clamp(14px,2vw,22px)}
+.staff-notes{font-size:14px}
+.staff-note label{font-size:15px}
+@media(max-width:560px){
+ .startend span{font-size:17px!important}
+ .startend b{font-size:clamp(18px,4.6vw,24px)!important}
+ #timetableTable td.station{font-size:clamp(17px,4.2vw,23px)!important}
+ #timetableTable td.station.passed-through,#timetableTable td.station.passed-through .pass-name{font-size:clamp(14px,3.5vw,19px)!important}
+ #timetableTable td:not(.station){font-size:clamp(14px,3.4vw,19px)}
+ #timetableTable th{font-size:12px}
+}
+
+
+/* v24: header and crew typography; horizontal car count */
+.cars-cell{flex-direction:row;align-items:center;justify-content:flex-end;gap:3px;padding:7px 12px}
+.cars-cell b{font-size:clamp(34px,5vw,54px)!important;font-weight:400}
+.cars-cell span{font-size:clamp(14px,2vw,22px);margin-left:2px}
+.staffhead .trainkind b{font-size:clamp(34px,6vw,56px)!important}
+.train-number{gap:7px}
+.train-number strong{font-size:clamp(32px,5vw,56px)!important;font-weight:400}
+.train-number small{font-size:18px}
+.crew-state{font-size:clamp(20px,3.5vw,32px)!important}
+#editMark{font-size:clamp(18px,2.5vw,24px)}\n#timetableTable td.custom-merged{white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;vertical-align:top;padding:8px;background:#fff;font-size:clamp(16px,2.3vw,25px);font-weight:400}\n#timetableTable td.custom-merged:focus{outline:2px solid #1769c2}
+
+
+/* v26: compact station / exchange columns; give space to times and remarks */
+#timetableTable th:nth-child(1), #timetableTable td:nth-child(1) { width:13.5% !important; }
+#timetableTable th:nth-child(2), #timetableTable td:nth-child(2) { width:28% !important; }
+#timetableTable th:nth-child(3), #timetableTable td:nth-child(3) { width:8% !important; }
+#timetableTable th:nth-child(4), #timetableTable td:nth-child(4) { width:28% !important; }
+#timetableTable th:nth-child(5), #timetableTable td:nth-child(5) { width:22.5% !important; }
+
+#timetableTable td.station {
+  padding-left:1px !important; padding-right:1px !important;
+  white-space:nowrap !important; letter-spacing:0 !important; overflow:hidden;
+}
+#timetableTable td.crossing {
+  padding-left:0 !important; padding-right:0 !important;
+  font-size:clamp(13px,1.8vw,20px) !important; white-space:nowrap;
+}
+#timetableTable td.remark { padding-left:5px !important; padding-right:5px !important; }
+#timetableTable td:not(.station):not(.crossing) { font-variant-numeric:tabular-nums; }
+#timetableTable .seconds {
+  margin-left:4px !important; font-size:.58em !important;
+  vertical-align:super; white-space:nowrap;
+}
+#timetableTable td:nth-child(2), #timetableTable td:nth-child(4) {
+  white-space:nowrap; padding-left:3px !important; padding-right:3px !important;
+}
+@media(max-width:560px) {
+  #timetableTable th:nth-child(1), #timetableTable td:nth-child(1) { width:13.5% !important; }
+  #timetableTable th:nth-child(2), #timetableTable td:nth-child(2),
+  #timetableTable th:nth-child(4), #timetableTable td:nth-child(4) { width:28% !important; }
+  #timetableTable th:nth-child(3), #timetableTable td:nth-child(3) { width:8% !important; }
+  #timetableTable th:nth-child(5), #timetableTable td:nth-child(5) { width:22.5% !important; }
+  #timetableTable .seconds { margin-left:4px !important; }
+}
+
+</style>
+
+<style id="v27-readable-time-and-crossing">
+/* v27: 着発時刻と①欄を見やすく拡大 */
+#timetableTable td:nth-child(2),
+#timetableTable td:nth-child(4) {
+  font-size: clamp(19px, 3vw, 32px) !important;
+  font-weight: 500;
+}
+#timetableTable td.crossing {
+  font-size: clamp(18px, 2.5vw, 27px) !important;
+  font-weight: 600;
+}
+#timetableTable .seconds {
+  font-size: .52em !important;
+}
+@media (max-width: 560px) {
+  #timetableTable td:nth-child(2),
+  #timetableTable td:nth-child(4) {
+    font-size: clamp(16px, 4vw, 23px) !important;
+  }
+  #timetableTable td.crossing {
+    font-size: clamp(16px, 4vw, 22px) !important;
+  }
+}
+</style>
+
+
+<style id="v28-eighteen-rows">
+/* v28: 18行表示。従来の表の縦寸法に収まるよう行高を調整 */
+#timetableTable tbody tr,
+#timetableTable tbody td {
+  height: 40px !important;
+}
+#timetableTable td.remark {
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  font-size: clamp(11px, 1.6vw, 17px) !important;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  #timetableTable tbody tr,
+  #timetableTable tbody td {
+    height: 38px !important;
+  }
+  #timetableTable td.remark {
+    font-size: 10px !important;
+    line-height: 1.1;
+  }
+}
+</style>
+
+
+<style id="v29-fullscreen-mode">
+.staff-screen-controls {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:5px 8px; border-bottom:1px solid #333; background:#f3f3f3;
+}
+.staff-screen-controls button { padding:6px 12px; font-size:clamp(13px,1.6vw,18px); }
+.staff-screen-controls strong { min-width:6em; text-align:center; font-size:clamp(13px,1.6vw,18px); }
+#fullscreenExit { display:none; }
+body.staff-fullscreen { overflow:hidden; background:#fff; }
+body.staff-fullscreen > header,
+body.staff-fullscreen main > section:not(#staffPanel),
+body.staff-fullscreen main > p { display:none !important; }
+body.staff-fullscreen main { margin:0; padding:0; max-width:none; }
+body.staff-fullscreen #staffPanel {
+  display:block !important; position:fixed; inset:0; z-index:9999;
+  width:100vw; height:100vh; height:100dvh; max-width:none;
+  margin:0; padding:0; overflow:auto; border:0; border-radius:0; box-shadow:none;
+  background:#fff;
+}
+body.staff-fullscreen #staffPanelHeading { display:none !important; }
+body.staff-fullscreen #staff {
+  width:100%; min-height:100%; margin:0; border:0; border-radius:0; box-shadow:none;
+}
+body.staff-fullscreen #staffScreenControls {
+  position:sticky; top:0; z-index:20; min-height:42px;
+}
+body.staff-fullscreen #fullscreenExit { display:inline-block; }
+body.staff-fullscreen .staff-body {
+  /* 行を画面の残り高さに合わせて伸縮させず、均等な固定高にする */
+  min-height:0;
+  height:auto;
+  align-items:start;
+}
+body.staff-fullscreen .timetable { min-height:0; overflow:visible; }
+body.staff-fullscreen #timetableTable {
+  height:auto !important;
+  table-layout:fixed;
+  border-collapse:collapse;
+}
+body.staff-fullscreen #timetableTable tbody tr { height:40px !important; }
+body.staff-fullscreen #timetableTable tbody td {
+  height:40px !important;
+  min-height:40px;
+  max-height:40px;
+  padding-top:3px !important;
+  padding-bottom:3px !important;
+  line-height:1.15;
+  overflow:hidden;
+}
+body.staff-fullscreen .staffhead { min-height:80px; }
+body.staff-fullscreen .staff-subhead { min-height:65px; }
+body.staff-fullscreen .staff-screen-controls button:disabled { opacity:.35; }
+@media (max-width:560px) {
+ .staff-screen-controls { gap:5px; padding:4px; }
+ .staff-screen-controls button { padding:6px 7px; }
+ body.staff-fullscreen .staff-body { min-height:0; height:auto; }
+ body.staff-fullscreen #timetableTable tbody tr,
+ body.staff-fullscreen #timetableTable tbody td {
+   height:38px !important;
+   min-height:38px;
+   max-height:38px;
+ }
+}
+</style>
+
+
+<style id="v31-row-colors">
+/* v31: 行ごとの文字色・背景色設定 */
+.editorgrid .row-colors{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:3px 2px 8px;border-bottom:1px solid #e1e5e8}
+.editorgrid .row-colors label{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:600}
+.editorgrid .row-colors input[type="color"]{width:42px;height:32px;min-width:42px;padding:2px;border:1px solid #aab4bd;border-radius:6px;background:#fff}
+.editorgrid .row-colors button{font-size:12px;padding:5px 8px}
+#timetableTable td.row-colored{background:var(--custom-row-bg)!important;color:var(--custom-row-text)!important}
+#timetableTable td.row-colored .pass-name{color:var(--custom-row-text)!important}
+#timetableTable td.station.passed-through.row-colored{color:var(--custom-row-text,#111111)!important}
+#timetableTable td.station.passed-through.row-colored .pass-name{color:var(--custom-row-text,#111111)!important}
+#timetableTable td.row-colored .seconds{color:inherit}
+</style>
+
+</head>
+<body>
+<header><strong>縦型スタフ・シミュレーター</strong><small>iPad向け v9｜趣味・シミュレーション専用</small></header>
+<main>
+<section class="panel">
+ <h2>時計</h2>
+ <div class="row" style="justify-content:space-between">
+  <div><div class="clock" id="clock">--:--:--</div><div class="sub" id="clockLabel">実時間モード</div></div>
+  <div class="row"><button id="realMode" class="primary">実時間</button><button id="manualMode">手動設定</button></div>
+ </div>
+ <div class="row" id="manualControls" hidden style="margin-top:10px">
+  <label>開始時刻 <input type="text" id="manualTime" inputmode="numeric" maxlength="8" value="11:37:00" placeholder="HH:MM:SS"></label>
+  <button id="setTime">この時刻に設定</button><label>再生速度 <select id="playSpeed"><option value="0.5">0.5倍</option><option value="1" selected>1倍</option><option value="2">2倍</option><option value="5">5倍</option><option value="10">10倍</option><option value="20">20倍</option></select></label>
+ </div>
+</section>
+
+<section class="panel" id="staffPanel">
+ <div class="row" id="staffPanelHeading" style="justify-content:space-between"><h2>スタフ表示</h2><div class="row"><span class="sub">サンプルデータ</span><button id="fullscreenToggle" class="primary" type="button">全画面表示 ⛶</button></div></div>
+ <div class="staff" id="staff">
+  <div class="paper-top"></div>
+  <div class="staff-screen-controls" id="staffScreenControls">
+   <button id="staffPagePrev" type="button" disabled>◀ 前ページ</button>
+   <strong id="staffPageLabel">1 / 1 ページ</strong>
+   <button id="staffPageNext" type="button" disabled>次ページ ▶</button>
+   <button id="fullscreenExit" type="button">全画面終了 ✕</button>
+  </div>
+  <div class="staffhead"><div class="trainkind"><b id="kind"></b></div><div class="trainmark" id="trainmark"></div><div class="cars-cell"><b id="cars"></b><span>両</span></div></div>
+  <div class="staff-subhead">
+   <div class="startend"><span>発</span><b id="origin"></b><span>着</span><b id="terminal"></b></div>
+   <div class="train-number"><strong id="trainNo"></strong><small>列車</small></div>
+   <button class="crew-state" id="crewEnd">乗務終了</button>
+  </div>
+  <div class="staff-body">
+   <div class="timetable" id="timetablePane">
+    <table id="timetableTable"><tbody id="staffRows"></tbody></table>
+    <div class="stop-screen" id="stopScreen" hidden><div class="stop-message"><span id="stopCars"></span><small>両</small><span class="stop-station-line"><span id="stopStationName" class="stop-station-name"></span><strong>停車</strong></span></div><div class="stop-times"><div>着時刻 <b id="stopArr">--:--:--</b></div><div>発時刻 <b id="stopDep">--:--:--</b></div></div><button id="stopConfirm" class="stop-confirm">停車確認</button></div>
+   </div>
+   <div class="right-column"><div class="analog-clock" id="analogClock"><div class="clock-face" id="clockFace"><span>12</span><span>3</span><span>6</span><span>9</span><i></i><b class="hour-hand"></b><b class="minute-hand"></b><b class="second-hand"></b></div><div id="staffDigitalClock" class="staff-digital-clock">--:--:--</div></div><div class="right-blank"><div class="staff-notes"><div class="staff-note"><label for="headNumber">先頭番号</label><input id="headNumber" type="text" placeholder=""></div><div class="staff-note"><label for="article">記事</label><textarea id="article" rows="4" placeholder=""></textarea></div><div class="staff-note"><label for="operationSummary">運転概要確認</label><textarea id="operationSummary" rows="6" placeholder=""></textarea></div></div></div></div>
+  </div>
+ </div>
+ <div class="notice" id="notice" style="margin-top:10px"><strong id="noticeTitle">まもなく停車</strong><span id="noticeText"></span></div>
+ <div class="row" style="justify-content:center;margin-top:12px">
+  <button id="prev">前の駅</button><button id="next" class="primary">次の駅へ ▶</button><button id="manualStop" class="red">停車確認画面</button><button id="reset">先頭に戻る</button>
+ </div>
+ <div class="sub" id="progress" style="text-align:center;margin-top:7px">駅を選択してください</div>
+</section>
+
+<section class="panel">
+ <h2>駅接近案内（シミュレーション）</h2>
+ <div class="row">
+  <button id="gps">GPSを有効化</button>
+  <label>接近距離 <select id="distance"><option value="500">500 m</option><option value="1000" selected>1 km</option><option value="2000">2 km</option><option value="3000">3 km</option></select></label>
+  <label><input type="checkbox" id="voice" checked> 音声案内</label>
+  <label><input type="checkbox" id="autoStop" checked> 到着前の自動案内</label>
+  <label>案内タイミング <input type="number" id="leadSeconds" min="1" max="3600" step="1" value="90" style="width:85px"> 秒前</label>
+  <button id="audioEnable">音声を有効化・テスト</button>
+ </div>
+ <p class="sub" id="audioStatus">iPadでは最初に「音声を有効化・テスト」を一度押してください。端末の音声設定によっては自動再生が制限されます。</p>
+ <p class="sub" id="gpsStatus">GPSは任意です。駅の座標を登録した場合に限り、接近判定を行います。</p>
+ <p class="sub">※位置情報の許可が必要です。GPS通知はアプリを開いている間の補助的なシミュレーション機能です。</p>
+</section>
+
+<section class="panel">
+ <h2>スタフ編集</h2>
+ <div class="row">
+  <label>種別 <select id="editKind" style="width:150px"><option>普通</option><option>準急</option><option>急行</option><option>快急</option><option>特急</option><option>快特</option><option>μs</option><option>回送</option><option>試運転</option><option>団体</option><option>貨物</option><option>区間快速</option><option>快速</option><option>新快速</option><option>特別快速</option></select></label>
+  <label>列車番号 <input id="editNo" value="312" style="width:90px"></label>
+  <label>表示 <select id="editMark"><option value="M">M</option><option value="C">C</option><option value="">無表示</option></select></label>
+  <label>両数 <input id="editCars" type="number" min="1" max="20" step="1" value="6" style="width:75px"></label>
+ </div>
+ <div class="row" style="margin:10px 0"><label>始発 <input id="editOrigin" value="名鉄名古屋"></label><label>終着 <input id="editTerminal" value="中部国際空港"></label></div>
+ <div class="sub">下の18行は固定です。①は「×／(×)／表示無し」、②は自由記入の備考欄です。時刻は時・分・秒を選択して設定できます。</div>
+ <div id="editor"></div>
+  <div class="panel" style="margin-top:10px;padding:10px"><strong>時刻表の大きな自由記入マス</strong>
+  <p class="sub">現在のページ内で結合する行・列を選びます。作成後は時刻表のマスをタップして直接入力できます。</p>
+  <div class="row"><label>開始行 <select id="mergeRowStart"></select></label><label>終了行 <select id="mergeRowEnd"></select></label>
+  <label>開始列 <select id="mergeColStart"><option value="0">駅名</option><option value="1">到着</option><option value="2">①</option><option value="3">出発</option><option value="4">備考</option></select></label>
+  <label>終了列 <select id="mergeColEnd"><option value="0">駅名</option><option value="1">到着</option><option value="2">①</option><option value="3">出発</option><option value="4">備考</option></select></label></div>
+  <div class="row" style="margin-top:8px"><button id="addMergedCell" type="button">選択範囲を大きなマスにする</button><button id="removeMergedCells" type="button">このページの大きなマスを解除</button></div></div>
+ <div class="row" style="justify-content:flex-end;margin-top:8px"><button id="addPage">2ページ目を追加</button><button id="pagePrev" disabled>前ページ</button><span id="pageLabel" class="sub">1 / 1 ページ</span><button id="pageNext" disabled>次ページ</button></div>
+ <div class="row" style="margin-top:10px"><button id="apply" class="primary">表示に反映</button><button id="save">このiPadに保存</button></div>
+ <div class="sub" id="saveStatus" style="margin-top:7px">保存データはこのブラウザ内に保持されます。</div>
+</section>
+
+<section class="panel">
+ <h2>外部データ読み込み・書き出し</h2>
+ <p class="sub">CSVまたはJSONを読み込めます。CSVは駅名・時刻・①・備考・停車／通過・座標を読み書きします。JSONは複数ページと大きな自由記入マスも保存します。</p>
+ <div class="row"><input type="file" id="file" accept=".csv,.json,text/csv,application/json"><button id="export">CSVを書き出す</button><button id="jsonExport">JSONを書き出す</button></div>
+ <p class="sub">Excelファイル（.xlsx）はこの試作版では未対応です。CSV形式で保存して読み込んでください。</p>
+</section>
+<p class="sub" style="text-align:center">この試作版は実際の鉄道運行・乗務・安全判断には使用できません。駅時刻・位置はサンプルで、実在の運行情報ではありません。</p>
+</main>
+<div id="crewEndConfirm" hidden style="position:fixed;inset:0;z-index:20;background:#0008;display:grid;place-items:center;padding:16px">
+ <div role="dialog" aria-modal="true" aria-labelledby="crewEndTitle" style="background:white;color:#17202a;border-radius:12px;padding:20px;max-width:360px;width:100%;box-shadow:0 8px 30px #0005">
+  <strong id="crewEndTitle" style="display:block;font-size:18px;margin-bottom:12px">本当に終了しますか？</strong><p>スタフ情報と保存データを消去します。</p>
+  <div class="row" style="justify-content:flex-end"><button id="crewEndCancel">キャンセル</button><button id="crewEndAccept" class="red">終了する</button></div>
+ </div>
+</div>
+<script>
+const sample=[
+ {name:"名鉄名古屋",arr:"",dep:"11:37",stopType:"停車",lat:null,lon:null},
+ {name:"金山",arr:"11:40",dep:"11:41",stopType:"停車",lat:null,lon:null},
+ {name:"神宮前",arr:"11:44",dep:"11:45",stopType:"停車",lat:null,lon:null},
+ {name:"太田川",arr:"11:55",dep:"11:56",stopType:"停車",lat:null,lon:null},
+ {name:"尾張横須賀",arr:"11:59",dep:"",stopType:"通過",lat:null,lon:null},
+ {name:"朝倉",arr:"12:04",dep:"12:05",stopType:"停車",lat:null,lon:null},
+ {name:"新舞子",arr:"12:10",dep:"",stopType:"通過",lat:null,lon:null},
+ {name:"常滑",arr:"12:17",dep:"12:18",stopType:"停車",lat:null,lon:null},
+ {name:"中部国際空港",arr:"12:23",dep:"",stopType:"停車",lat:null,lon:null}
+];
+let stations=sample.map(x=>({...x})),current=-1,page=0,mode="real",manualSeconds=11*3600+37*60,watchId=null,announced=new Set(),customCells=[];
+const $=id=>document.getElementById(id);
+function nowSeconds(){let d=new Date();return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()}
+function fmt(s){s=Math.floor(s);s=((s%86400)+86400)%86400;return [Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(x=>String(x).padStart(2,"0")).join(":")}
+function updateAnalogClock(){
+ const seconds=Math.floor(mode==="real"?nowSeconds():manualSeconds);
+ const sec=seconds%60,min=Math.floor(seconds/60)%60,hour=Math.floor(seconds/3600)%12;
+ $("clockFace").querySelector(".second-hand").style.transform=`translateX(-50%) rotate(${sec*6}deg)`;
+ $("clockFace").querySelector(".minute-hand").style.transform=`translateX(-50%) rotate(${min*6+sec*.1}deg)`;
+ $("clockFace").querySelector(".hour-hand").style.transform=`translateX(-50%) rotate(${hour*30+min*.5}deg)`;
+ const digital=$("staffDigitalClock");if(digital)digital.textContent=fmt(seconds);
+}
+function tick(){if(mode==="real")$("clock").textContent=new Date().toLocaleTimeString("ja-JP",{hour12:false});else $("clock").textContent=fmt(manualSeconds);updateAnalogClock();$("clockLabel").textContent=mode==="real"?"実時間モード":`手動設定モード（${$("playSpeed").value}倍速）`}
+let lastClockTick=Date.now();
+setInterval(()=>{const now=Date.now(),elapsed=(now-lastClockTick)/1000;lastClockTick=now;if(mode==="manual")manualSeconds+=elapsed*Number($("playSpeed").value||1);tick();scheduleCheck()},100);tick();
+$("playSpeed").onchange=()=>tick();
+$("realMode").onclick=()=>{mode="real";$("manualControls").hidden=true;$("realMode").classList.add("primary");$("manualMode").classList.remove("primary");tick()};
+$("manualMode").onclick=()=>{mode="manual";$("manualControls").hidden=false;$("manualMode").classList.add("primary");$("realMode").classList.remove("primary");tick()};
+$("setTime").onclick=()=>{
+ const v=normalizeTimeInput($("manualTime").value),seconds=timeToSeconds(v);
+ if(seconds===null){alert("時刻は HH:MM または HH:MM:SS の形式で入力してください。");return}
+ $("manualTime").value=v;manualSeconds=seconds;autoTriggered.clear();tick();scheduleCheck()
+};
+const kindStyles={
+ "普通":{label:"普通",bg:"#111111",fg:"#ffffff"},
+ "準急":{label:"準急",bg:"#159447",fg:"#ffffff"},
+ "急行":{label:"急行",bg:"#1769c2",fg:"#ffffff"},
+ "快急":{label:"快急",bg:"#ffffff",fg:"#55c8e8"},
+ "特急":{label:"特急",bg:"#d51f2a",fg:"#ffffff"},
+ "快特":{label:"快特",bg:"#ffffff",fg:"#d51f2a"},
+ "μs":{label:"μs",bg:"#ffffff",fg:"#d51f2a"},
+ "回送":{label:"回送",bg:"#ffffff",fg:"#111111"},
+ "試運転":{label:"試運転",bg:"#ffffff",fg:"#111111"},
+ "団体":{label:"団体",bg:"#ffffff",fg:"#111111"},
+ "貨物":{label:"貨物",bg:"#ffffff",fg:"#111111"},
+ "区間快速":{label:"区間快速",bg:"#159447",fg:"#ffffff"},
+ "快速":{label:"快速",bg:"#1769c2",fg:"#ffffff"},
+ "新快速":{label:"新快速",bg:"#f28c18",fg:"#ffffff"},
+ "特別快速":{label:"特別快速",bg:"#ffdf32",fg:"#111111"}
+};
+function normalizeKind(value){
+ const v=String(value??"").trim();
+ if(["快速急行","快急"].includes(v)) return "快急";
+ if(["快速特急","快特"].includes(v)) return "快特";
+ if(["ミュースカイ","μ","μs"].includes(v)) return "μs";
+ if(["貸切","団体"].includes(v)) return "団体";
+ return v===""?"":(kindStyles[v]?v:"特急");
+}
+function normalizeCars(value){return String(value??"").replace(/\\s*両\\s*$/,"").trim()}
+let displayMode="timetable";
+function showStopScreen(){displayMode="stop";$("stopScreen").hidden=false;$("timetableTable").style.visibility="hidden";updateStopDetails()}
+function showTimetable(){displayMode="timetable";$("stopScreen").hidden=true;$("timetableTable").style.visibility="visible"}
+function updateStopDetails(){const st=stations[current]||{};$("stopCars").textContent=normalizeCars($("editCars").value)||"";$("stopStationName").textContent=st.name||"";$("stopArr").textContent=st.arr||"";$("stopDep").textContent=st.dep||""}
+$("stopConfirm").onclick=()=>showTimetable();
+function timeCell(value){if(!value)return "";const p=String(value).split(":");return `${esc((p[0]||"").padStart(2,"0"))}:${esc((p[1]||"00").padStart(2,"0"))}${p.length>=3?`<sup class="seconds">${esc((p[2]||"00").padStart(2,"0"))}</sup>`:""}`}
+function render(){
+ const kind=normalizeKind($("editKind").value),style=kindStyles[kind]||{label:"",bg:"#fff",fg:"#111"};
+ $("editKind").value=kind;$("kind").textContent=style.label;$("kind").parentElement.style.background=style.bg;$("kind").parentElement.style.color=style.fg;
+ $("trainmark").textContent=$("editMark").value;
+ $("trainNo").textContent=$("editNo").value;
+ $("cars").textContent=normalizeCars($("editCars").value)||"";
+ $("origin").textContent=$("editOrigin").value;$("terminal").textContent=$("editTerminal").value;
+ // 強調駅の直前にある「停車」駅を表示先頭にし、その間の通過駅も含めて上に詰める。
+ // 元の stations 配列は変更せず、表示する開始位置だけを切り替える。
+ let displayStart=page*18;
+ if(current>=0 && current<stations.length){
+  let previousStop=-1;
+  for(let i=current-1;i>=0;i--){
+   if(stations[i]?.name && stations[i]?.stopType==="停車"){previousStop=i;break;}
+  }
+  displayStart=previousStop>=0?previousStop:current;
+ }
+ const cols=["name","arr","crossing","dep","remark"];
+ const rows=Array.from({length:18},(_,slot)=>{
+  const i=displayStart+slot,s=stations[i]||blankStation(),active=i===current&&s.name;
+  let cells="";
+  for(let c=0;c<5;c++){
+   const merged=customCells.find(m=>i>=m.rowStart&&i<=m.rowEnd&&c>=m.colStart&&c<=m.colEnd);
+   if(merged){if(i===merged.rowStart&&c===merged.colStart)cells+=`<td class="custom-merged" colspan="${merged.colEnd-merged.colStart+1}" rowspan="${merged.rowEnd-merged.rowStart+1}" contenteditable="true" data-merged-id="${merged.id}">${esc(merged.text||"")}</td>`;continue;}
+   let value="";
+   if(c===0)value=s.stopType==="通過"&&s.name?`<span class="pass-name">${esc(s.name)}</span>`:esc(s.name);
+   if(c===1)value=timeCell(s.arr);
+   if(c===2)value=({x:"×","×":"×",wait:"(×)","(×)":"(×)",none:"","表示無し":""})[s.crossing]||"";
+   if(c===3)value=timeCell(s.dep);
+   if(c===4)value=esc(s.remark||"");
+   // 行ごとの色は駅名・着時刻・運転扱い・発時刻まで（備考欄には適用しない）
+   const applyRowColor=c<=3;
+   const cls=(c===0?`station ${s.stopType==="通過"?"passed-through":"stopped"}`:c===2?"crossing":c===4?"remark":"")+(applyRowColor&&(s.textColor||s.bgColor)?" row-colored":"");
+   const colorStyle=(applyRowColor&&(s.textColor||s.bgColor))?` style="${s.textColor?`--custom-row-text:${esc(s.textColor)};`:""}${s.bgColor?`--custom-row-bg:${esc(s.bgColor)};`:""}"`:"";
+   if(c===0&&s.stopType==="通過"&&s.name&&s.textColor)value=`<span class="pass-name" style="color:${esc(s.textColor)}">${esc(s.name)}</span>`;
+   cells+=`<td class="${cls}" data-col="${cols[c]}"${colorStyle}>${value}</td>`;
+  }
+  return `<tr data-station="${i}" class="${active?'current':i<current&&s.name?'passed':''}">${cells}</tr>`;
+ }).join("");
+ $("staffRows").innerHTML=rows;
+ $("staffRows").querySelectorAll("tr").forEach(row=>row.addEventListener("click",e=>{
+  if(e.target.isContentEditable)return;
+  const i=Number(row.dataset.station);
+  if(stations[i]?.name){
+   if(Math.floor(i/18)!==page){saveEditorPage();page=Math.floor(i/18);buildEditor();}
+   current=i;showTimetable();render();
+  }
+ }));
+ $("staffRows").querySelectorAll("[data-merged-id]").forEach(cell=>cell.addEventListener("input",()=>{const m=customCells.find(z=>z.id===cell.dataset.mergedId);if(m)m.text=cell.innerText;}));
+ const pageCount=Math.max(1,Math.ceil(stations.length/18));
+ $("progress").textContent=current<0?"駅を選択してください":`${current+1} マス目：${stations[current]?.name||""}`;
+ $("pageLabel").textContent=`${page+1} / ${pageCount} ページ`;
+ $("staffPageLabel").textContent=`${page+1} / ${pageCount} ページ`;
+ $("pagePrev").disabled=page===0;
+ $("staffPagePrev").disabled=page===0;
+ $("pageNext").disabled=page>=pageCount-1;
+ $("staffPageNext").disabled=page>=pageCount-1;
+ if(displayMode==="stop")updateStopDetails();
+ updateAnalogClock();
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+let speechReady=false;
+function speakPhrase(text,onDone){
+ if(!("speechSynthesis"in window)){if(onDone)onDone();return}
+ const u=new SpeechSynthesisUtterance(text);u.lang="ja-JP";u.rate=1;
+ let finished=false;
+ const done=()=>{if(finished)return;finished=true;if(onDone)onDone()};
+ u.onend=done;u.onerror=done;
+ speechSynthesis.speak(u);
+}
+function announce(i){
+ if(i<0||i>=stations.length||!stations[i]?.name)return;
+ const st=stations[i];
+ $("notice").style.display="none";
+ if(!$("voice").checked||!("speechSynthesis"in window))return;
+ speechSynthesis.cancel();
+ const phrase="停車です。停車です。"+(normalizeCars($("editCars").value)||"未設定")+"両。";
+ let count=0;
+ const again=()=>{if(count>=3)return;count++;speakPhrase(phrase,()=>{if(count<3)window.setTimeout(again,1200)})};
+ if(!speechReady){$("audioStatus").textContent="音声が未有効化です。「音声を有効化・テスト」を押してください。";return}
+ again();
+}
+function move(n,fromGps=false){
+ const next=Math.max(0,Math.min(stations.length-1,n));
+ if(Math.floor(next/18)!==page){saveEditorPage();page=Math.floor(next/18);buildEditor();}
+ current=next;render();announce(current);if(fromGps)showStopScreen();
+}
+function normalizeTimeInput(v){
+ const value=String(v??"").trim();
+ if(!value)return "";
+ const parts=value.split(":");
+ if(parts.length===2&&parts.every(x=>/^\\d{1,2}$/.test(x)))return parts.map(x=>x.padStart(2,"0")).join(":")+":00";
+ if(parts.length===3&&parts.every(x=>/^\\d{1,2}$/.test(x)))return parts.map(x=>x.padStart(2,"0")).join(":");
+ return value;
+}
+function timeToSeconds(v){
+ if(!v)return null;
+ const a=normalizeTimeInput(v).split(":").map(Number);
+ if(a.length!==3||a.some(Number.isNaN)||a[0]<0||a[0]>23||a[1]<0||a[1]>59||a[2]<0||a[2]>59)return null;
+ return a[0]*3600+a[1]*60+a[2];
+}
+const autoTriggered=new Set();let lastAutoDay="";
+function scheduleCheck(){
+ if(!$("autoStop")?.checked)return;
+ const lead=Math.max(1,Math.min(3600,Number($("leadSeconds").value)||90));
+ const now=mode==="real"?nowSeconds():manualSeconds;
+ const day=mode==="real"?new Date().toDateString():"manual";
+ if(day!==lastAutoDay){autoTriggered.clear();lastAutoDay=day}
+ let best=null;
+ stations.forEach((st,i)=>{
+  const arr=timeToSeconds(st.arr);if(arr===null||!st.name)return;
+  let delta=arr-now;if(delta < -43200)delta+=86400;if(delta>43200)delta-=86400;
+  if(delta>=0&&delta<=lead&&!autoTriggered.has(i)&&(!best||delta<best.delta))best={i,delta};
+ });
+ if(best){autoTriggered.add(best.i);current=best.i;render();announce(best.i);showStopScreen()}
+}
+$("autoStop").onchange=()=>{if($("autoStop").checked)scheduleCheck()};
+$("audioEnable").onclick=()=>{
+ if(!("speechSynthesis"in window)){ $("audioStatus").textContent="このブラウザは音声合成に対応していません。";return}
+ speechSynthesis.cancel();speechReady=true;
+ const test=new SpeechSynthesisUtterance("音声案内を有効にしました。");test.lang="ja-JP";
+ test.onend=()=>{$("audioStatus").textContent="音声案内を有効化しました。停車前の自動案内でも音声を再生します。"};
+ test.onerror=()=>{$("audioStatus").textContent="音声再生に失敗しました。iPadの消音・音量・Safariの設定を確認してください。"};
+ speechSynthesis.speak(test);
+};
+
+$("next").onclick=()=>move(current+1);$("prev").onclick=()=>move(current<=0?0:current-1);$("manualStop").onclick=()=>{if(current<0)current=0;render();showStopScreen()};$("reset").onclick=()=>{current=-1;announced.clear();$("notice").style.display="none";showTimetable();render()};
+$("crewEnd").onclick=()=>{$("crewEndConfirm").hidden=false};
+$("crewEndCancel").onclick=()=>{$("crewEndConfirm").hidden=true};
+$("crewEndAccept").onclick=()=>{
+ $("crewEndConfirm").hidden=true;
+ stations=Array.from({length:Math.max(18,stations.length)},()=>blankStation());current=-1;page=0;
+ autoTriggered.clear();announced.clear();
+ try{localStorage.removeItem("staffSimData")}catch(e){}
+ ["editKind","editNo","editMark","editCars","editOrigin","editTerminal"].forEach(id=>$(id).value="");
+ $("notice").style.display="none";showTimetable();buildEditor();render();
+ $("saveStatus").textContent="乗務終了：スタフと保存データをクリアしました。";
+};
+function blankStation(){return {name:"",arr:"",dep:"",crossing:"",remark:"",stopType:"停車",lat:null,lon:null,textColor:"",bgColor:""}}
+function padStations(list){const arr=(Array.isArray(list)?list:[]).map(s=>({name:s.name||"",arr:s.arr||s.arrival||"",dep:s.dep||s.departure||"",crossing:s.crossing||"",remark:s.remark||"",stopType:s.stopType||"停車",lat:s.lat===""||s.lat==null?null:Number(s.lat),lon:s.lon===""||s.lon==null?null:Number(s.lon),textColor:s.textColor||"",bgColor:s.bgColor||""}));while(arr.length<18||arr.length%18!==0)arr.push(blankStation());return arr}
+function timeWheel(value,label){
+ const p=value?normalizeTimeInput(value).split(":"):[];
+ const opts=(n,v)=>'<option value=""></option>'+Array.from({length:n},(_,i)=>{const x=String(n===12?i*5:i).padStart(2,"0");return `<option value="${x}" ${v===x?"selected":""}>${x}</option>`}).join("");
+ return `<div class="time-wheel" aria-label="${label}">
+ <select aria-label="${label} 時">${opts(24,p[0]||"")}</select><span>:</span>
+ <select aria-label="${label} 分">${opts(60,p[1]||"")}</select><span>:</span>
+ <select aria-label="${label} 秒">${opts(12,p[2]||"")}</select></div>`;
+}
+function readTimeWheel(el){
+ const v=[...el.querySelectorAll("select")].map(x=>x.value);
+ return v.every(x=>x==="")?"":v.some(x=>x==="")?"":v.join(":");
+}
+function buildEditor(){
+ const start=page*18;
+ const header='<div class="editorgrid editorhead"><b>駅名</b><b>到着時刻</b><b>出発時刻</b><b>①</b><b>② 備考</b><b>停車／通過</b></div>';
+ $("editor").innerHTML=header+stations.slice(start,start+18).map((s,slot)=>{const i=start+slot;return `<div class="editorgrid" data-i="${i}">
+  <input aria-label="駅名 ${i+1}" value="${esc(s.name)}" placeholder="駅名">
+  ${timeWheel(s.arr,"到着")}${timeWheel(s.dep,"出発")}
+  <select aria-label="列車交換・通過待ち"><option value="" ${!s.crossing?"selected":""}>表示無し</option><option value="x" ${s.crossing==="x"?"selected":""}>×</option><option value="wait" ${s.crossing==="wait"?"selected":""}>(×)</option></select>
+  <input aria-label="備考" value="${esc(s.remark||"")}" placeholder="備考">
+  <select class="stop-type" aria-label="停車・通過"><option value="停車" ${s.stopType!=="通過"?"selected":""}>停車</option><option value="通過" ${s.stopType==="通過"?"selected":""}>通過</option></select>
+  <div class="row-colors"><label>文字色 <input class="row-text-color" type="color" aria-label="${i+1}行目の文字色" value="${s.textColor||"#111111"}"></label><label>背景色 <input class="row-bg-color" type="color" aria-label="${i+1}行目の背景色" value="${s.bgColor||"#ffffff"}"></label><button type="button" class="clear-row-colors">色を初期状態に戻す</button></div>
+ </div>`}).join("");
+ $("editor").querySelectorAll(".clear-row-colors").forEach(btn=>btn.addEventListener("click",()=>{const row=btn.closest('.editorgrid[data-i]');row.querySelector('.row-text-color').value="#111111";row.querySelector('.row-bg-color').value="#ffffff";row.dataset.clearColors="1";}));
+ $("editor").querySelectorAll(".row-text-color,.row-bg-color").forEach(input=>input.addEventListener("input",()=>{delete input.closest('.editorgrid[data-i]').dataset.clearColors;}));
+}
+function saveEditorPage(){
+ [...$("editor").querySelectorAll('.editorgrid[data-i]')].forEach(el=>{
+  const i=Number(el.dataset.i),nameInput=el.querySelector('input[aria-label^="駅名"]'),remarkInput=el.querySelector('input[placeholder="備考"]'),wheels=el.querySelectorAll(".time-wheel"),crossing=el.querySelector('select[aria-label="列車交換・通過待ち"]'),stopType=el.querySelector("select.stop-type");
+  const old=stations[i]||blankStation(),textPicker=el.querySelector('.row-text-color'),bgPicker=el.querySelector('.row-bg-color');
+  const textColor=el.dataset.clearColors==="1"?"":(textPicker&&(textPicker.value!=="#111111"||old.textColor)?textPicker.value:old.textColor||"");
+  const bgColor=el.dataset.clearColors==="1"?"":(bgPicker&&(bgPicker.value!=="#ffffff"||old.bgColor)?bgPicker.value:old.bgColor||"");
+  stations[i]={name:nameInput.value,arr:readTimeWheel(wheels[0]),dep:readTimeWheel(wheels[1]),crossing:crossing?.value||"",remark:remarkInput.value,stopType:stopType?.value||"停車",lat:old.lat??null,lon:old.lon??null,textColor,bgColor};
+ });
+}
+$("addPage").onclick=()=>{saveEditorPage();stations.push(...Array.from({length:18},()=>blankStation()));page=Math.ceil(stations.length/18)-1;buildEditor();render()};
+function changeStaffPage(delta){
+ const next=page+delta;
+ const pageCount=Math.max(1,Math.ceil(stations.length/18));
+ if(next<0||next>=pageCount)return;
+ saveEditorPage();page=next;buildEditor();render();
+}
+$("pagePrev").onclick=()=>changeStaffPage(-1);
+$("pageNext").onclick=()=>changeStaffPage(1);
+$("staffPagePrev").onclick=()=>changeStaffPage(-1);
+$("staffPageNext").onclick=()=>changeStaffPage(1);
+
+$("addMergedCell").onclick=()=>{saveEditorPage();const r1=+$("mergeRowStart").value,r2=+$("mergeRowEnd").value,c1=+$("mergeColStart").value,c2=+$("mergeColEnd").value;if(r1>r2||c1>c2){alert("開始行・列は終了行・列以下にしてください。");return;}const m={id:"merge-"+Date.now(),rowStart:page*18+r1-1,rowEnd:page*18+r2-1,colStart:c1,colEnd:c2,text:""};customCells=customCells.filter(z=>m.rowEnd<z.rowStart||m.rowStart>z.rowEnd||m.colEnd<z.colStart||m.colStart>z.colEnd);customCells.push(m);render();};
+$("removeMergedCells").onclick=()=>{const a=page*18,b=a+17;customCells=customCells.filter(m=>m.rowEnd<a||m.rowStart>b);render();};
+function readEditor(){saveEditorPage();autoTriggered.clear();current=-1;render();}
+$("apply").onclick=()=>{readEditor();$("saveStatus").textContent="スタフ表示に反映しました。";scheduleCheck()};
+$("save").onclick=()=>{readEditor();let data={meta:meta(),stations,customCells};try{localStorage.setItem("staffSimData",JSON.stringify(data));$("saveStatus").textContent="このブラウザに保存しました。"}catch(e){$("saveStatus").textContent="保存できませんでした。ブラウザの設定をご確認ください。"}};
+function meta(){return {kind:normalizeKind($("editKind").value),no:$("editNo").value,mark:$("editMark").value,cars:normalizeCars($("editCars").value),origin:$("editOrigin").value,terminal:$("editTerminal").value}}
+function loadData(data){
+ if(!Array.isArray(data.stations))throw Error("stations配列がありません");
+ stations=padStations(data.stations);customCells=Array.isArray(data.customCells)?data.customCells:[];let m=data.meta||data;
+ $("editKind").value=normalizeKind(m.kind||"普通");$("editNo").value=m.no||m.trainNo||"";
+ $("editMark").value=m.mark??"M";$("editCars").value=normalizeCars(m.cars||"");
+ $("editOrigin").value=m.origin||stations[0]?.name||"";$("editTerminal").value=m.terminal||stations.filter(s=>s.name).at(-1)?.name||"";
+ current=-1;buildEditor();render();
+}
+function parseCSV(text){
+ const rows=[];let row=[],field="",quoted=false;const s=text.replace(/^\\uFEFF/,"");
+ for(let i=0;i<s.length;i++){const ch=s[i],next=s[i+1];
+  if(ch==='"'&&quoted&&next==='"'){field+='"';i++;}
+  else if(ch==='"')quoted=!quoted;
+  else if(ch===","&&!quoted){row.push(field);field="";}
+  else if((ch==="\\n"||ch==="\\r")&&!quoted){if(ch==="\\r"&&next==="\\n")i++;row.push(field);if(row.some(v=>v!==""))rows.push(row);row=[];field="";}
+  else field+=ch;
+ }
+ if(field!==""||row.length){row.push(field);if(row.some(v=>v!==""))rows.push(row);}
+ return rows;
+}
+$("file").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{
+ let t=await f.text(),data;
+ if(f.name.toLowerCase().endsWith(".json"))data=JSON.parse(t);
+ else{
+  const rows=parseCSV(t);if(!rows.length)throw Error("CSVが空です");
+  const header=rows[0].map(v=>v.trim());
+  const hasHeader=header.some(v=>["駅名","着時刻","発時刻","①","②備考","停車／通過"].includes(v));
+  if(hasHeader)rows.shift();
+  const col=(names,fallback)=>{const i=header.findIndex(v=>names.includes(v));return i>=0?i:fallback;};
+  const ix={name:col(["駅名"],0),arr:col(["着時刻","到着時刻"],1),dep:col(["発時刻","出発時刻"],2),crossing:col(["①","列車交換"],3),remark:col(["②備考","備考","②"],4),stopType:col(["停車／通過","停車/通過","停車・通過"],5),lat:col(["緯度"],6),lon:col(["経度"],7),textColor:col(["文字色"],8),bgColor:col(["背景色"],9)};
+  data={stations:rows.map(r=>({name:r[ix.name]||"",arr:r[ix.arr]||"",dep:r[ix.dep]||"",crossing:r[ix.crossing]||"",remark:r[ix.remark]||"",stopType:r[ix.stopType]||"停車",lat:r[ix.lat]||null,lon:r[ix.lon]||null,textColor:r[ix.textColor]||"",bgColor:r[ix.bgColor]||""}))};
+ }
+ loadData(data);$("saveStatus").textContent="ファイルを読み込みました。";
+ }catch(err){alert("読み込みに失敗しました。CSV/JSONの形式を確認してください。");}};
+function download(name,text,type){let blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+$("export").onclick=()=>{readEditor();let csv=["駅名,着時刻,発時刻,①,②備考,停車／通過,緯度,経度,文字色,背景色",...stations.map(s=>[s.name,s.arr,s.dep,s.crossing||"",s.remark||"",s.stopType||"停車",s.lat??"",s.lon??"",s.textColor||"",s.bgColor||""].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(","))].join("\n");download("staff.csv","\uFEFF"+csv,"text/csv;charset=utf-8")};
+$("jsonExport").onclick=()=>{readEditor();download("staff.json",JSON.stringify({meta:meta(),stations,customCells},null,2),"application/json")};
+function dist(a,b,c,d){const R=6371000,p=Math.PI/180,dp=(c-a)*p,dl=(d-b)*p,x=Math.sin(dp/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+$("gps").onclick=()=>{if(!navigator.geolocation){$("gpsStatus").textContent="このブラウザでは位置情報を利用できません。";return}if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;$("gps").textContent="GPSを有効化";$("gpsStatus").textContent="GPSを停止しました。";return}watchId=navigator.geolocation.watchPosition(pos=>{let {latitude,longitude}=pos.coords;let candidates=stations.map((s,i)=>({...s,i})).filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lon));if(!candidates.length){$("gpsStatus").textContent="GPS取得中。各駅の緯度・経度が未登録のため接近判定はできません。CSV/JSONで座標を登録してください。";return}let nearest=candidates.map(s=>({...s,d:dist(latitude,longitude,s.lat,s.lon)})).sort((a,b)=>a.d-b.d)[0];$("gpsStatus").textContent=`GPS取得中：最寄り登録駅 ${nearest.name}（約${Math.round(nearest.d)}m）`;if(nearest.d<=+$("distance").value&&!announced.has(nearest.i)){announced.add(nearest.i);move(nearest.i,true)}},err=>{$("gpsStatus").textContent="GPSエラー："+err.message+"（HTTPS接続と位置情報許可を確認してください）"},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});$("gps").textContent="GPSを停止"};
+try{
+ let saved=localStorage.getItem("staffSimData");
+ if(saved){
+  let d=JSON.parse(saved);stations=padStations(d.stations);customCells=Array.isArray(d.customCells)?d.customCells:[];let m=d.meta||{};
+  $("editKind").value=m.kind||"";$("editNo").value=m.no||m.trainNo||"";$("editMark").value=m.mark??"";
+  $("editCars").value=normalizeCars(m.cars||"");$("editOrigin").value=m.origin||"";
+  $("editTerminal").value=m.terminal||"";
+ }else stations=padStations([]);
+}catch(e){stations=padStations([])}
+["mergeRowStart","mergeRowEnd"].forEach(id=>{$(id).innerHTML=Array.from({length:18},(_,i)=>`<option value="${i+1}">${i+1}行目</option>`).join("");});
+buildEditor();render();scheduleCheck();
+</script>
+
+<script id="v29-fullscreen-script">
+(function(){
+ const enter=$("fullscreenToggle"),leave=$("fullscreenExit");
+ function setFullscreen(on){
+  document.body.classList.toggle("staff-fullscreen",on);
+  enter.textContent=on?"全画面表示中":"全画面表示 ⛶";
+  if(on){
+   const target=$("staffPanel");
+   if(target && target.requestFullscreen){
+    const result=target.requestFullscreen();
+    if(result && result.catch)result.catch(()=>{});
+   }
+  }else if(document.fullscreenElement && document.exitFullscreen){
+   const result=document.exitFullscreen();
+   if(result && result.catch)result.catch(()=>{});
+  }
+ }
+ enter.addEventListener("click",()=>setFullscreen(true));
+ leave.addEventListener("click",()=>setFullscreen(false));
+ document.addEventListener("fullscreenchange",()=>{
+  if(!document.fullscreenElement && document.body.classList.contains("staff-fullscreen")){
+   document.body.classList.remove("staff-fullscreen");
+   enter.textContent="全画面表示 ⛶";
+  }
+ });
+ document.addEventListener("keydown",e=>{
+  if(e.key==="Escape" && document.body.classList.contains("staff-fullscreen"))setFullscreen(false);
+ });
+})();
+</script>
+
+</body>
+</html>
